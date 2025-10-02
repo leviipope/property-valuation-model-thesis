@@ -1,4 +1,4 @@
-# Scrapy settings for property_scraper project
+# Scrapy settings for scraper project
 #
 # For simplicity, this file contains only settings considered important or
 # commonly used. You can find more settings consulting the documentation:
@@ -7,16 +7,16 @@
 #     https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
 #     https://docs.scrapy.org/en/latest/topics/spider-middleware.html
 
-BOT_NAME = "property_scraper"
+BOT_NAME = "scraper"
 
-SPIDER_MODULES = ["property_scraper.spiders"]
-NEWSPIDER_MODULE = "property_scraper.spiders"
+SPIDER_MODULES = ["scraper.spiders"]
+NEWSPIDER_MODULE = "scraper.spiders"
 
 ADDONS = {}
 
 
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
-#USER_AGENT = "property_scraper (+http://www.yourdomain.com)"
+#USER_AGENT = "scraper (+http://www.yourdomain.com)"
 
 # Obey robots.txt rules
 ROBOTSTXT_OBEY = True
@@ -41,13 +41,13 @@ DOWNLOAD_DELAY = 1
 # Enable or disable spider middlewares
 # See https://docs.scrapy.org/en/latest/topics/spider-middleware.html
 #SPIDER_MIDDLEWARES = {
-#    "property_scraper.middlewares.PropertyScraperSpiderMiddleware": 543,
+#    "scraper.middlewares.ScraperSpiderMiddleware": 543,
 #}
 
 # Enable or disable downloader middlewares
 # See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
 #DOWNLOADER_MIDDLEWARES = {
-#    "property_scraper.middlewares.PropertyScraperDownloaderMiddleware": 543,
+#    "scraper.middlewares.ScraperDownloaderMiddleware": 543,
 #}
 
 # Enable or disable extensions
@@ -59,7 +59,7 @@ DOWNLOAD_DELAY = 1
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 #ITEM_PIPELINES = {
-#    "property_scraper.pipelines.PropertyScraperPipeline": 300,
+#    "scraper.pipelines.ScraperPipeline": 300,
 #}
 
 # Enable and configure the AutoThrottle extension (disabled by default)
