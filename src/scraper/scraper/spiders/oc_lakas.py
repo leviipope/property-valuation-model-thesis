@@ -1,5 +1,5 @@
 import scrapy
-
+from scraper.items import ScraperItem
 
 class OcLakasSpider(scrapy.Spider):
     name = "oc_lakas"
@@ -28,12 +28,14 @@ class OcLakasSpider(scrapy.Spider):
                 callback=self.parse_listing,
                 meta = {
                     'id': id,
+                    'listing_url': listing_url,
                     'is_new_apartment': is_new_apartment,
                 }
             )
 
     def parse_listing(self, response):
         id = response.meta.get('id')
+        listing_url = response.meta.get('listing_url')
         is_new_apartment = response.meta.get('is_new_apartment')
 
         if not is_new_apartment:
@@ -47,24 +49,23 @@ class OcLakasSpider(scrapy.Spider):
             condition = response.xpath('//div[@class="col data-label" and text()="Állapot"]/following-sibling::div[@class="col data-value"][1]/text()').get()
             heating = response.xpath('//div[@class="col data-label" and text()="Fűtés"]/following-sibling::div[@class="col data-value"][1]/text()').get()
             bathrooms = response.xpath('//div[@class="col data-label" and text()="Fürdőszobák száma"]/following-sibling::div[@class="col data-value"][1]/text()').get()
-            ceiling_height = response.xpath('//div[@class="col data-label" and text()="Belmagasság"]/following-sibling::div[@class="col data-value"][1]/text()').get()
             stairwell_condition = response.xpath('//div[@class="col data-label" and text()="Lépcsőház állapota"]/following-sibling::div[@class="col data-value"][1]/text()').get()
             facade_condition = response.xpath('//div[@class="col data-label" and text()="Homlokzat állapota"]/following-sibling::div[@class="col data-value"][1]/text()').get()
             legal_status = response.xpath('//div[@class="col data-label" and text()="Jogi státusz"]/following-sibling::div[@class="col data-value"][1]/text()').get()
 
-        yield {
-            "id": id,
-            "price": price,
-            "year_built": year_built,
-            "build_type": build_type,
-            "size": size,
-            "condition": condition,
-            "rooms": rooms,
-            "heating": heating,
-            "bathrooms": bathrooms,
-            "ceiling_height": ceiling_height,
-            "stairwell_condition": stairwell_condition,
-            "facade_condition": facade_condition,
-            "legal_status": legal_status,
-        }
+        scraper_item = ScraperItem()
+        scraper_item["site"] = "oc"
+        scraper_item["id"] = id
+        scraper_item["listing_url"] = listing_url
+        scraper_item["price"] = price
+        scraper_item["year_built"] = year_built
+        scraper_item["size"] = size
+        scraper_item["condition"] = condition
+        scraper_item["rooms"] = rooms
+        scraper_item["heating"] = heating
+        scraper_item["bathrooms"] = bathrooms
+        scraper_item["stairwell_condition"] = stairwell_condition
+        scraper_item["facade_condition"] = facade_condition
+        scraper_item["legal_status"] = legal_status
 
+        yield scraper_item

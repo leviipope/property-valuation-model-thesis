@@ -1,4 +1,5 @@
 import scrapy
+from scraper.items import ScraperItem
 
 
 class JofogasLakasSpider(scrapy.Spider):
@@ -10,6 +11,8 @@ class JofogasLakasSpider(scrapy.Spider):
 
         for listing in listings:
             id = listing.css("div::attr(id)").get()
+            if "adverticum" in id:
+                continue
             listing_url_scrape = listing.css('section > h3 > a::attr(href)').get()
             listing_url = response.urljoin(listing_url_scrape)
 
@@ -53,22 +56,21 @@ class JofogasLakasSpider(scrapy.Spider):
         year_built = response.xpath(
                 '//div[span[text()="Építés éve:"]]//h6/span/text()'
             ).get(default="Hiányzó adat")
-        build_type = response.xpath(
-                '//div[span[text()="Ingatlan típusa:"]]//h6/span/text()'
-            ).get(default="Hiányzó adat")
         property_size = response.xpath(
                 '//div[span[text()="Kert mérete:"]]//h6/span/text()'
             ).get(default="Hiányzó adat")
+        
+        scraper_item = ScraperItem()
 
-        yield {
-            "id": id,
-            "listing_url": listing_url,
-            "price": price,
-            "size": size,
-            "condition": condition,
-            "rooms": rooms,
-            "heating": heating,
-            "year_built": year_built,
-            "build_type": build_type,
-            "property_size": property_size
-        }
+        scraper_item['site'] = "jofogas"
+        scraper_item['id'] = id
+        scraper_item['listing_url'] = listing_url
+        scraper_item['price'] = price
+        scraper_item['size'] = size
+        scraper_item['condition'] = condition
+        scraper_item['rooms'] = rooms
+        scraper_item['heating'] = heating
+        scraper_item['year_built'] = year_built
+        scraper_item['property_size'] = property_size
+
+        yield scraper_item
