@@ -5,6 +5,27 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).parent.parent
 DB_PATH = PROJECT_ROOT / "data/database.db" 
 
+def replace_nulls():
+    conn = get_connection()
+    c = conn.cursor()
+
+    tables = ["apartment_listings", "house_listings"]
+
+    for table in tables:
+        c.execute(f"PRAGMA table_info({table})")
+        columns = [col[1 ] for col in c.fetchall()]
+
+        for col in columns:
+            c.execute(f'''
+                UPDATE {table} 
+                SET {col} = 'missing data' 
+                WHERE {col} IS NULL
+            ''')
+        print(f"[INFO] NULL values replaced in table '{table}'")
+
+    conn.commit()
+    conn.close()
+
 def get_all_ids(table_name, site):
     conn = get_connection()
     c = conn.cursor()
@@ -45,7 +66,6 @@ def create_apartment_table():
             stairwell_condition TEXT,
             heating TEXT,
             year_built INT,
-            build_type TEXT,
             legal_status TEXT,
             PRIMARY KEY (site, id)
         ) 
@@ -98,7 +118,7 @@ def delete_listing(table_name, id):
     conn.close()
 
 def main():
-    print(get_all_ids("house_listings", "oc"))
+    replace_nulls()
 
 if __name__ == "__main__":
     main()

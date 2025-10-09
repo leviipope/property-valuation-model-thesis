@@ -9,6 +9,7 @@ import sys
 import re
 from itemadapter import ItemAdapter 
 from pathlib import Path
+from scrapy.utils.project import get_project_settings
 
 sys.path.insert(0, str(Path(__file__).parents[3]))
 from data.db import get_connection
@@ -40,7 +41,7 @@ class CleanDataPipeline:
 
         if spider.name == "jofogas_haz" or spider.name == "jofogas_lakas":
             for field in item.keys():
-                if item[field] == "Hiányzó adat":
+                if item[field] == "Hiányzó adat" or item[field] is None or item[field] == 'None' or item[field] == '':
                     item[field] = "missing data"
 
             if adapter.get('build_type'):
@@ -185,14 +186,26 @@ class CleanDataPipeline:
 
 class SQLitePipeline:
     def __init__(self):
-        print("\033[94mInitializing SQLitePipeline...\033[0m")
-        self.conn = get_connection()
-        self.cursor = self.conn.cursor()
+        settings = get_project_settings()
+        self.enabled = settings.getbool('ENABLE_SQL_PIPELINE')
+        if not self.enabled:
+            print("\033[93m[SQL PIPELINE DISABLED — DEVELOPMENT MODE]\033[0m")
+        else:
+            print("\033[94mInitializing SQLitePipeline...\033[0m")
+            self.conn = get_connection()
+            self.cursor = self.conn.cursor()
 
     def process_item(self, item, spider):
+        if not self.enabled:
+            return item
+
         adapter = ItemAdapter(item)
         id = adapter.get('id')
         print(f"\033[94mProcessing item ID: {id} in SQL pipeline\033[0m")
+
+        for key, value in adapter.items():
+            if value in [None, 'None', '']:
+                adapter[key] = 'missing data'
 
         if spider.name == "jofogas_lakas" or spider.name == "oc_lakas":
             columns, placeholders, values = [], [], []

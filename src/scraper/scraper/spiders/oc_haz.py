@@ -25,7 +25,7 @@ class OcHazSpider(scrapy.Spider):
                 continue
 
             is_new_house = True if property_sublink.split('/')[1] == "uj-lakas" else False
-            english_site = True if property_sublink.split('/')[1] == "realestate" else False
+            english_site = True if property_sublink.split('/')[1] == "realestate" or property_sublink.split('/')[1] == "realestates" else False
             if is_new_house or english_site:
                 continue
 
@@ -48,15 +48,15 @@ class OcHazSpider(scrapy.Spider):
             price = response.css("h2.head-price::text").get()
             price = price.replace('\xa0', '')
 
-            year_built = response.xpath('//div[@class="col data-label" and text()="Építés éve"]/following-sibling::div[@class="col data-value"][1]/text()').get()
-            size = response.xpath('//div[@class="col data-label" and text()="Méret"]/following-sibling::div[@class="col data-value"][1]/text()').get()
-            property_size = response.xpath('//div[@class="col data-label" and text()="Telek méret"]/following-sibling::div[@class="col data-value"][1]/text()').get()
-            rooms = response.xpath('//ul[@class="head-main-params"]/li[contains(text(),"szoba")]/text()').get()
-            condition = response.xpath('//div[@class="col data-label" and text()="Állapot"]/following-sibling::div[@class="col data-value"][1]/text()').get()
-            facade_condition = response.xpath('//div[@class="col data-label" and text()="Homlokzat állapota"]/following-sibling::div[@class="col data-value"][1]/text()').get()
-            heating = response.xpath('//div[@class="col data-label" and text()="Fűtés"]/following-sibling::div[@class="col data-value"][1]/text()').get()
-            bathrooms = response.xpath('//div[@class="col data-label" and text()="Fürdőszobák száma"]/following-sibling::div[@class="col data-value"][1]/text()').get()
-            legal_status = response.xpath('//div[@class="col data-label" and text()="Jogi státusz"]/following-sibling::div[@class="col data-value"][1]/text()').get()
+            year_built = response.xpath('//div[@class="col data-label" and text()="Építés éve"]/following-sibling::div[@class="col data-value"][1]/text()').get(default="missing data")
+            size = response.xpath('//div[@class="col data-label" and text()="Méret"]/following-sibling::div[@class="col data-value"][1]/text()').get(default="missing data")
+            property_size = response.xpath('//div[@class="col data-label" and text()="Telek méret"]/following-sibling::div[@class="col data-value"][1]/text()').get(default="missing data")
+            rooms = response.xpath('//ul[@class="head-main-params"]/li[contains(text(),"szoba")]/text()').get(default="missing data")
+            condition = response.xpath('//div[@class="col data-label" and text()="Állapot"]/following-sibling::div[@class="col data-value"][1]/text()').get(default="missing data")
+            facade_condition = response.xpath('//div[@class="col data-label" and text()="Homlokzat állapota"]/following-sibling::div[@class="col data-value"][1]/text()').get(default="missing data")
+            heating = response.xpath('//div[@class="col data-label" and text()="Fűtés"]/following-sibling::div[@class="col data-value"][1]/text()').get(default="missing data")
+            bathrooms = response.xpath('//div[@class="col data-label" and text()="Fürdőszobák száma"]/following-sibling::div[@class="col data-value"][1]/text()').get(default="missing data")
+            legal_status = response.xpath('//div[@class="col data-label" and text()="Jogi státusz"]/following-sibling::div[@class="col data-value"][1]/text()').get(default="missing data")
 
         scraper_item = ScraperItem()
         scraper_item["site"] = "oc"

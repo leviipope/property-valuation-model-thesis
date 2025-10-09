@@ -63,6 +63,8 @@ ITEM_PIPELINES = {
     "scraper.pipelines.SQLitePipeline": 800,
 }
 
+ENABLE_SQL_PIPELINE = True
+
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See https://docs.scrapy.org/en/latest/topics/autothrottle.html
 #AUTOTHROTTLE_ENABLED = True
