@@ -1,5 +1,10 @@
+import sys
 import scrapy
 from scraper.items import ScraperItem
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parents[4]))
+from data.db import get_all_ids
 
 class OcLakasSpider(scrapy.Spider):
     name = "oc_lakas"
@@ -14,9 +19,9 @@ class OcLakasSpider(scrapy.Spider):
             listing_url = response.urljoin(property_sublink)
             id = property_sublink.split('/')[-1]
 
-            # If id is present in DB, don't parse it.
-            ids = [] # Call db
+            ids = get_all_ids("apartment_listings", "oc")
             if id in ids:
+                print(f"\033[93m[SKIPPED] Listing with ID {id} already exists in the database.\033[0m")
                 continue
 
             is_new_apartment = True if property_sublink.split('/')[1] == "uj-lakas" else False

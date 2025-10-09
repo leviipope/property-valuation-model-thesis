@@ -1,6 +1,10 @@
+import sys
 import scrapy
 from scraper.items import ScraperItem
+from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).parents[4]))
+from data.db import get_all_ids
 
 class JofogasLakasSpider(scrapy.Spider):
     name = "jofogas_haz"
@@ -16,11 +20,10 @@ class JofogasLakasSpider(scrapy.Spider):
             listing_url_scrape = listing.css('section > h3 > a::attr(href)').get()
             listing_url = response.urljoin(listing_url_scrape)
 
-            # If id is present in DB, don't parse it.
-            ids = [] # Call db
+            ids = get_all_ids("house_listings", "jofogas")
             if id in ids:
+                print(f"\033[93m[SKIPPED] Listing with ID {id} already exists in the database.\033[0m")
                 continue
-
 
             yield response.follow(
                 listing_url,

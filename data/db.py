@@ -5,6 +5,14 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).parent.parent
 DB_PATH = PROJECT_ROOT / "data/database.db" 
 
+def get_all_ids(table_name, site):
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute(f'SELECT id FROM {table_name} WHERE site = ?', (site,))
+    ids = [row['id'] for row in c.fetchall()]
+    conn.close()
+    return ids
+
 def create_db():
     if not DB_PATH.exists():
         open(DB_PATH, 'w').close()
@@ -90,7 +98,7 @@ def delete_listing(table_name, id):
     conn.close()
 
 def main():
-    pass
+    print(get_all_ids("house_listings", "oc"))
 
 if __name__ == "__main__":
     main()
