@@ -6,7 +6,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parents[4]))
 from data.db import get_all_ids
 
-class JofogasLakasSpider(scrapy.Spider):
+class JofogasHazSpider(scrapy.Spider):
     name = "jofogas_haz"
     start_urls = ["https://ingatlan.jofogas.hu/hajdu-bihar/debrecen/haz?st=s"]
 

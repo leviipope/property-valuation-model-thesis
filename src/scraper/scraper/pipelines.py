@@ -29,11 +29,14 @@ class CleanDataPipeline:
 
     def try_convert_to_int(self, value, item_id=None, field_name='field'):
         """Try to convert a value to int. Logs a warning if conversion fails."""
-        try:
-            return self.convert_to_int(value)
-        except (ValueError, TypeError):
-            print(f"\033[93m[WARNING] {field_name} conversion failed for item ID {item_id} value: {value}\033[0m")
-            return None
+        if value == 'missing data':
+            return 'missing data'
+        else:
+            try:
+                return self.convert_to_int(value)
+            except (ValueError, TypeError):
+                print(f"\033[93m[WARNING] {field_name} conversion failed for item ID {item_id} value: {value}\033[0m")
+                return None
 
     def process_item(self, item, spider):
         adapter = ItemAdapter(item)
@@ -53,14 +56,14 @@ class CleanDataPipeline:
 
             if adapter.get('condition'):
                 condition = adapter.get('condition').lower()
-                if condition == 'jó állapotú':
+                if condition == 'jó állapotú' or condition == 'felújított':
                     adapter['condition'] = 'good'
-                elif condition == 'újszerű': # 'like new' but oc.hu has 'Kiváló' ('excellent') so for consistency use 'excellent'
+                elif condition == 'újszerű':
                     adapter['condition'] = 'excellent'
                 elif condition == 'új építésű':
                     adapter['condition'] = 'newly built'
                 elif condition == 'felújítandó':
-                    adapter['condition'] = 'to be renovated'
+                    adapter['condition'] = 'bad'
 
             if adapter.get('heating'):
                 heating = adapter.get('heating').lower()
@@ -70,6 +73,12 @@ class CleanDataPipeline:
                     adapter['heating'] = 'heat pump'
                 elif heating == 'egyéb':
                     adapter['heating'] = 'other'
+                elif heating == 'távfűtés' or heating == 'távhő':
+                    adapter['heating'] = 'district heating'
+                elif heating == 'egyedi mérős központifűtés':
+                    adapter['heating'] = 'individual metered central heating'
+                elif heating == 'gáz konvektor':
+                    adapter['heating'] = 'gas convector'
 
             if adapter.get('price'):
                 price_str = adapter.get('price').replace('Ft', '').replace(' ', '').replace('\n', '')
@@ -117,8 +126,8 @@ class CleanDataPipeline:
                     adapter['condition'] = 'excellent'
                 elif condition == 'átlagos':
                     adapter['condition'] = 'average'
-                elif condition == 'felújítandó':
-                    adapter['condition'] = 'to be renovated'
+                elif condition == 'felújítandó' or condition == 'Átlagon aluli':
+                    adapter['condition'] = 'bad'
 
             if adapter.get('facade_condition'):
                 facade_condition = adapter.get('facade_condition').lower()
@@ -152,7 +161,19 @@ class CleanDataPipeline:
                         adapter['heating'] = 'central gas heating'
                     elif heating == 'egyedi távfűtés':
                         adapter['heating'] = 'individual district heating'
-            
+                    elif heating == 'távfűtés':
+                        adapter['heating'] = 'district heating'
+                    elif heating == 'hőszivattyú':
+                        adapter['heating'] = 'heat pump'
+                    elif 'központi' in heating:
+                        adapter['heating'] = 'central heating'
+                    elif heating == 'gáz konvektor' or heating == 'gázkonvektor':
+                        adapter['heating'] = 'gas convector'
+                    elif heating == 'gázkazán':
+                        adapter['heating'] = 'gas boiler'
+                    elif heating == 'megújuló':
+                        adapter['heating'] = 'renewable'
+
             if adapter.get('legal_status'):
                 legal_status = adapter.get('legal_status').lower()
                 if legal_status == 'használt':

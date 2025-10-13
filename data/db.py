@@ -118,7 +118,8 @@ def delete_listing(table_name, id):
     conn.close()
 
 def main():
-    replace_nulls()
+    clear_table("apartment_listings")
+    clear_table("house_listings")
 
 if __name__ == "__main__":
     main()
