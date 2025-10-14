@@ -173,6 +173,8 @@ class CleanDataPipeline:
                         adapter['heating'] = 'gas boiler'
                     elif heating == 'megújuló':
                         adapter['heating'] = 'renewable'
+                    else:
+                        adapter['heating'] = 'missing data'
 
             if adapter.get('legal_status'):
                 legal_status = adapter.get('legal_status').lower()
