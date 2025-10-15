@@ -25,6 +25,8 @@ def start_all_spiders():
     process.crawl(OcLakasSpider)
     process.crawl(OcHazSpider)
 
+    process.start()
+
     print("\033[92m[INFO] All spiders finished!\033[0m")
 
 if __name__ == "__main__":

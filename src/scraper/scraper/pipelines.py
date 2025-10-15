@@ -169,7 +169,7 @@ class CleanDataPipeline:
                         adapter['heating'] = 'central heating'
                     elif heating == 'gáz konvektor' or heating == 'gázkonvektor':
                         adapter['heating'] = 'gas convector'
-                    elif heating == 'gázkazán':
+                    elif heating == 'gázkazán' or heating == 'gáz kazán':
                         adapter['heating'] = 'gas boiler'
                     elif heating == 'megújuló':
                         adapter['heating'] = 'renewable'
@@ -203,6 +203,35 @@ class CleanDataPipeline:
                 year_built_str = adapter.get('year_built').replace(' ', '')
                 adapter['year_built'] = self.try_convert_to_int(year_built_str, item_id=adapter.get('id'), field_name='year_built')
 
+        if adapter.get('legal_status') == 'new':
+            if adapter.get('year_built') == 'missing data':
+                adapter['year_built'] = 2024
+            if adapter.get('condition') == 'missing data':
+                adapter['condition'] = 'newly built'
+
+        if adapter.get('condition') == 'newly built':
+            if adapter.get('year_built') == 'missing data':
+                adapter['year_built'] = 2024
+            if adapter.get('legal_status') == 'missing data':
+                adapter['legal_status'] = 'new'
+
+        if adapter.get('year_built') in [2024, 2025, 2026]:
+            if adapter.get('condition') == 'missing data':
+                adapter['condition'] = 'newly built'
+            if adapter.get('legal_status') == 'missing data':
+                adapter['legal_status'] = 'new'
+
+        if spider.name == "oc_haz" or spider.name == "jofogas_haz":
+            if adapter.get('condition') == 'newly built' and adapter.get('facade_condition') == 'missing data':
+                adapter['facade_condition'] = 'excellent'
+
+        if spider.name == "oc_lakas" or spider.name == "jofogas_lakas":
+            if adapter.get('condition') == 'newly built':
+                if adapter.get('facade_condition') == 'missing data':
+                    adapter['facade_condition'] = 'excellent'
+                if adapter.get('stairwell_condition') == 'missing data':
+                    adapter['stairwell_condition'] = 'excellent'
+                    
         print("\033[92mItem cleaned!\033[0m")
 
         return item

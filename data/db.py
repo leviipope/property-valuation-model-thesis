@@ -1,11 +1,87 @@
 import sqlite3
 import os
+import pandas as pd
+import sqlalchemy as sa
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).parent.parent
-DB_PATH = PROJECT_ROOT / "data/database.db" 
+DB_PATH = PROJECT_ROOT / "data/raw/raw.db" 
 
-def replace_nulls():
+def migrate_and_clean():
+    conn = get_connection()
+
+    apartments = pd.read_sql("SELECT * FROM apartment_listings", conn)
+    houses = pd.read_sql("SELECT * FROM house_listings", conn)
+
+    conn.close()
+
+    apartments.drop(columns=['site', 'id', 'listing_url'], errors='ignore', inplace=True)
+    houses.drop(columns=['site', 'id', 'listing_url'], errors='ignore', inplace=True)
+
+    apartments.replace("missing data", pd.NA, inplace=True)
+    houses.replace("missing data", pd.NA, inplace=True)
+
+    for col in ['rooms', 'size', 'property_size', 'year_built']:
+        houses[col] = pd.to_numeric(houses[col], errors='coerce')
+
+    for col in ['rooms', 'size', 'year_built']:
+        apartments[col] = pd.to_numeric(apartments[col], errors='coerce')
+        houses[col] = pd.to_numeric(houses[col], errors='coerce')
+
+    def clean_table(df):
+        numeric_cols = df.select_dtypes(include=["float64", "int64"]).columns
+        categorical_cols = df.select_dtypes(include=["object"]).columns
+
+        for col in numeric_cols:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+            df[col] = df[col].fillna(df[col].median())
+
+        for col in categorical_cols:
+            df[col] = df[col].astype(str)
+            df[col] = df[col].fillna('missing')
+
+        df = pd.get_dummies(df, columns=categorical_cols, drop_first=True)
+
+        return df
+    
+    apartments_clean = clean_table(apartments)
+    houses_clean = clean_table(houses)
+
+    NEW_DB_PATH = PROJECT_ROOT / "data/processed/processed.db"
+    new_conn = sqlite3.connect(NEW_DB_PATH)
+
+    apartments_clean.to_sql("apartment_listings_clean", new_conn, if_exists='replace', index=False)
+    houses_clean.to_sql("house_listings_clean", new_conn, if_exists='replace', index=False)
+
+    new_conn.close()
+
+    print("[INFO] Data migration completed.")
+
+def get_info():
+    engine = sa.create_engine(f"sqlite:///{DB_PATH}")
+    print(("Apartment Listings Table Info:"))
+    df = pd.read_sql("SELECT * FROM apartment_listings", engine)
+    print(df.info())
+    print(df.head())
+    print("\n\n" + "-"*50 + "\n")
+    print("\nHouse Listings Table Info:")
+    df = pd.read_sql("SELECT * FROM house_listings", engine)
+    print(df.info())
+    print(df.head())
+
+def get_column_info(table_name):
+    conn = get_connection()
+    c = conn.cursor()
+
+    c.execute(f"PRAGMA table_info({table_name})")
+    columns = c.fetchall()
+
+    for col in columns:
+        print(f"Column: {col[1]}, Type: {col[2]}")
+    
+    conn.close()
+
+def replace_nulls(): # deprecated
     conn = get_connection()
     c = conn.cursor()
 
@@ -118,8 +194,7 @@ def delete_listing(table_name, id):
     conn.close()
 
 def main():
-    clear_table("apartment_listings")
-    clear_table("house_listings")
+    migrate_and_clean()
 
 if __name__ == "__main__":
     main()

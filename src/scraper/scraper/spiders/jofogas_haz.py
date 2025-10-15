@@ -75,5 +75,8 @@ class JofogasHazSpider(scrapy.Spider):
         scraper_item['heating'] = heating
         scraper_item['year_built'] = year_built
         scraper_item['property_size'] = property_size
+        scraper_item['bathrooms'] = "missing data"
+        scraper_item['facade_condition'] = "missing data"
+        scraper_item['legal_status'] = "missing data"
 
         yield scraper_item

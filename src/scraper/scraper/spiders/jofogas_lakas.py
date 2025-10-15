@@ -71,5 +71,9 @@ class JofogasLakasSpider(scrapy.Spider):
         scraper_item["rooms"] = rooms
         scraper_item["heating"] = heating
         scraper_item["year_built"] = year_built
+        scraper_item["bathrooms"] = "missing data"
+        scraper_item["facade_condition"] = "missing data"
+        scraper_item["stairwell_condition"] = "missing data"
+        scraper_item["legal_status"] = "missing data"
 
         yield scraper_item
