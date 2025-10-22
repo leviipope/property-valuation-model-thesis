@@ -21,12 +21,11 @@ def migrate_and_clean():
     apartments.replace("missing data", pd.NA, inplace=True)
     houses.replace("missing data", pd.NA, inplace=True)
 
-    for col in ['rooms', 'size', 'property_size', 'year_built']:
+    for col in ['rooms', 'size', 'property_size', 'year_built', 'bathrooms']:
         houses[col] = pd.to_numeric(houses[col], errors='coerce')
 
-    for col in ['rooms', 'size', 'year_built']:
+    for col in ['rooms', 'size', 'year_built', 'bathrooms']:
         apartments[col] = pd.to_numeric(apartments[col], errors='coerce')
-        houses[col] = pd.to_numeric(houses[col], errors='coerce')
 
     def clean_table(df):
         numeric_cols = df.select_dtypes(include=["float64", "int64"]).columns
@@ -34,7 +33,12 @@ def migrate_and_clean():
 
         for col in numeric_cols:
             df[col] = pd.to_numeric(df[col], errors='coerce')
-            df[col] = df[col].fillna(df[col].median())
+            if col == 'bathrooms':
+                df[col] = df[col].fillna(df[col].mode()[0])
+            elif col == 'year_built':
+                df[col] = df[col].fillna(int(df[col].mean()))
+            else:
+                df[col] = df[col].fillna(df[col].median())
 
         for col in categorical_cols:
             df[col] = df[col].astype(str)
