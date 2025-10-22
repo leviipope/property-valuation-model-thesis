@@ -203,24 +203,6 @@ class CleanDataPipeline:
                 year_built_str = adapter.get('year_built').replace(' ', '')
                 adapter['year_built'] = self.try_convert_to_int(year_built_str, item_id=adapter.get('id'), field_name='year_built')
 
-        if adapter.get('legal_status') == 'new':
-            if adapter.get('year_built') == 'missing data':
-                adapter['year_built'] = 2024
-            if adapter.get('condition') == 'missing data':
-                adapter['condition'] = 'newly built'
-
-        if adapter.get('condition') == 'newly built':
-            if adapter.get('year_built') == 'missing data':
-                adapter['year_built'] = 2024
-            if adapter.get('legal_status') == 'missing data':
-                adapter['legal_status'] = 'new'
-
-        if adapter.get('year_built') in [2024, 2025, 2026]:
-            if adapter.get('condition') == 'missing data':
-                adapter['condition'] = 'newly built'
-            if adapter.get('legal_status') == 'missing data':
-                adapter['legal_status'] = 'new'
-
         if spider.name == "oc_haz" or spider.name == "jofogas_haz":
             if adapter.get('condition') == 'newly built' and adapter.get('facade_condition') == 'missing data':
                 adapter['facade_condition'] = 'excellent'

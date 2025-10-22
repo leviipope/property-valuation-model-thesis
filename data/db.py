@@ -1,5 +1,6 @@
 import sqlite3
 import os
+import numpy as np
 import pandas as pd
 import sqlalchemy as sa
 from pathlib import Path
@@ -7,6 +8,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).parent.parent
 DB_PATH = PROJECT_ROOT / "data/raw/raw.db" 
 
+# Migrate data from raw.db to processed.db with cleaning and feature engineering
 def migrate_and_clean():
     conn = get_connection()
 
@@ -18,9 +20,11 @@ def migrate_and_clean():
     apartments.drop(columns=['site', 'id', 'listing_url'], errors='ignore', inplace=True)
     houses.drop(columns=['site', 'id', 'listing_url'], errors='ignore', inplace=True)
 
+    # Replace "missing data" with pd.NA
     apartments.replace("missing data", pd.NA, inplace=True)
     houses.replace("missing data", pd.NA, inplace=True)
 
+    # Convert columns to numeric where applicable
     for col in ['rooms', 'size', 'property_size', 'year_built', 'bathrooms']:
         houses[col] = pd.to_numeric(houses[col], errors='coerce')
 
@@ -28,9 +32,29 @@ def migrate_and_clean():
         apartments[col] = pd.to_numeric(apartments[col], errors='coerce')
 
     def clean_table(df):
+        # Fill legal_status for new properties
+        mask_new = df['legal_status'].eq('new')
+        df.loc[mask_new & df['year_built'].isna(), 'year_built'] = 2024
+        df.loc[mask_new & df['condition'].isna(), 'condition'] = 'newly built'
+
+        # Fill condition for 'newly built' properties
+        mask_newly_built = df['condition'].eq('newly built')
+        df.loc[mask_newly_built & df['year_built'].isna(), 'year_built'] = 2024
+        df.loc[mask_newly_built & df['legal_status'].isna(), 'legal_status'] = 'new'
+
+        # Fill based on year_built
+        mask_year_new = df['year_built'].isin([2024, 2025, 2026])
+        df.loc[mask_year_new & df['legal_status'].isna(), 'legal_status'] = 'new'
+        df.loc[mask_year_new & df['condition'].isna(), 'condition'] = 'newly built'
+
+        # Fill legal_status for used properties
+        mask_used = df['legal_status'].isna() & ~df['year_built'].isin([2024, 2025, 2026])
+        df.loc[mask_used, 'legal_status'] = 'used'
+
         numeric_cols = df.select_dtypes(include=["float64", "int64"]).columns
         categorical_cols = df.select_dtypes(include=["object"]).columns
 
+        # Handle missing values
         for col in numeric_cols:
             df[col] = pd.to_numeric(df[col], errors='coerce')
             if col == 'bathrooms':
@@ -44,22 +68,57 @@ def migrate_and_clean():
             df[col] = df[col].astype(str)
             df[col] = df[col].fillna('missing')
 
-        df = pd.get_dummies(df, columns=categorical_cols, drop_first=True)
-
         return df
     
     apartments_clean = clean_table(apartments)
     houses_clean = clean_table(houses)
 
-    NEW_DB_PATH = PROJECT_ROOT / "data/processed/processed.db"
-    new_conn = sqlite3.connect(NEW_DB_PATH)
+    def feature_engineering_apartment(df):
+        df.insert(9, 'age_of_property', 2026 - df['year_built'])
+        df['age_of_property'] = df['age_of_property'].clip(lower=0, upper=100).astype(int)
+        df.insert(1, 'log_price', (df['price'].apply(lambda x: pd.NA if x <= 0 else x).apply(lambda x: pd.NA if pd.isna(x) else round(np.log(x), 2))))
+        df.insert(3, 'log_size', (df['size'].apply(lambda x: pd.NA if x <= 0 else x).apply(lambda x: pd.NA if pd.isna(x) else round(np.log(x), 2))))
+        df.insert(5, 'size_per_room', (df['size'] / df['rooms']).astype(int))
+        df.insert(7, 'bathrooms_per_room', (df['bathrooms'] / df['rooms']).round(2))
+        return df
+    
+    def feature_engineering_house(df):
+        df.insert(9, 'age_of_property', 2026 - df['year_built'])
+        df['age_of_property'] = df['age_of_property'].clip(lower=0, upper=100).astype(int)
+        df.insert(1, 'log_price', (df['price'].apply(lambda x: pd.NA if x <= 0 else x).apply(lambda x: pd.NA if pd.isna(x) else round(np.log(x), 2))))
+        df.insert(3, 'log_size', (df['size'].apply(lambda x: pd.NA if x <= 0 else x).apply(lambda x: pd.NA if pd.isna(x) else round(np.log(x), 2))))
+        df.insert(4, 'log_property_size', (df['property_size'].apply(lambda x: pd.NA if x <= 0 else x).apply(lambda x: pd.NA if pd.isna(x) else round(np.log(x), 2))))
+        df.insert(7, 'size_per_room', (df['size'] / df['rooms']).astype(int))
+        df.insert(9, 'bathrooms_per_room', (df['bathrooms'] / df['rooms']).round(2))
+        return df
 
-    apartments_clean.to_sql("apartment_listings_clean", new_conn, if_exists='replace', index=False)
-    houses_clean.to_sql("house_listings_clean", new_conn, if_exists='replace', index=False)
+    apartments_engineered = feature_engineering_apartment(apartments_clean)
+    houses_engineered = feature_engineering_house(houses_clean)
+
+    apartments_clean.drop(columns=['size', 'price'], inplace=True)
+    houses_clean.drop(columns=['size', 'price', 'property_size'], inplace=True)
+
+    new_conn = get_new_connection()
+
+    apartments_engineered.to_sql("apartment_listings_processed", new_conn, if_exists='replace', index=False)
+    houses_engineered.to_sql("house_listings_processed", new_conn, if_exists='replace', index=False)
 
     new_conn.close()
 
     print("[INFO] Data migration completed.")
+
+def get_new_connection():
+    DB_PATH = PROJECT_ROOT / "data/processed/processed.db"
+    try:
+        if not os.path.exists(DB_PATH):
+            raise FileNotFoundError(f"Database file not found at {DB_PATH}")
+        
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        return conn
+    except sqlite3.Error as e:
+         raise RuntimeError(f"\033[91m[DB ERROR] Failed to connect to database: {e}\033[0m")
+    
 
 def get_info():
     engine = sa.create_engine(f"sqlite:///{DB_PATH}")
@@ -83,27 +142,6 @@ def get_column_info(table_name):
     for col in columns:
         print(f"Column: {col[1]}, Type: {col[2]}")
     
-    conn.close()
-
-def replace_nulls(): # deprecated
-    conn = get_connection()
-    c = conn.cursor()
-
-    tables = ["apartment_listings", "house_listings"]
-
-    for table in tables:
-        c.execute(f"PRAGMA table_info({table})")
-        columns = [col[1 ] for col in c.fetchall()]
-
-        for col in columns:
-            c.execute(f'''
-                UPDATE {table} 
-                SET {col} = 'missing data' 
-                WHERE {col} IS NULL
-            ''')
-        print(f"[INFO] NULL values replaced in table '{table}'")
-
-    conn.commit()
     conn.close()
 
 def get_all_ids(table_name, site):
@@ -183,8 +221,12 @@ def clear_table(table_name):
     conn.commit()
     conn.close()
 
-def delete_table(table_name):
-    conn = get_connection()
+def delete_table(table_name, database):
+    database = int(input("Select database to delete from (1 - raw.db, 2 - processed.db): "))
+    if database == 1:
+        conn = get_connection()
+    if database == 2:
+        conn = get_new_connection()
     c = conn.cursor()
     c.execute(f'DROP TABLE IF EXISTS {table_name}')
     conn.commit()
