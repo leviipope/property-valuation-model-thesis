@@ -9,16 +9,14 @@ PROJECT_ROOT = Path(__file__).parent.parent
 DB_PATH = PROJECT_ROOT / "data/raw/raw.db" 
 
 # Migrate data from raw.db to processed.db with cleaning and feature engineering
-def migrate_and_clean():
+def process_raw_data():
     conn = get_connection()
-
     apartments = pd.read_sql("SELECT * FROM apartment_listings", conn)
     houses = pd.read_sql("SELECT * FROM house_listings", conn)
-
     conn.close()
 
-    apartments.drop(columns=['site', 'id', 'listing_url'], errors='ignore', inplace=True)
-    houses.drop(columns=['site', 'id', 'listing_url'], errors='ignore', inplace=True)
+    apartments.drop(columns=['site', 'listing_url'], errors='ignore', inplace=True)
+    houses.drop(columns=['site', 'listing_url'], errors='ignore', inplace=True)
 
     # Replace "missing data" with pd.NA
     apartments.replace("missing data", pd.NA, inplace=True)
@@ -27,27 +25,23 @@ def migrate_and_clean():
     # Convert columns to numeric where applicable
     for col in ['rooms', 'size', 'property_size', 'year_built', 'bathrooms']:
         houses[col] = pd.to_numeric(houses[col], errors='coerce')
-
     for col in ['rooms', 'size', 'year_built', 'bathrooms']:
         apartments[col] = pd.to_numeric(apartments[col], errors='coerce')
 
     def clean_table(df):
-        # Fill legal_status for new properties
+        # Legal status cross validation
         mask_new = df['legal_status'].eq('new')
         df.loc[mask_new & df['year_built'].isna(), 'year_built'] = 2024
         df.loc[mask_new & df['condition'].isna(), 'condition'] = 'newly built'
 
-        # Fill condition for 'newly built' properties
         mask_newly_built = df['condition'].eq('newly built')
         df.loc[mask_newly_built & df['year_built'].isna(), 'year_built'] = 2024
         df.loc[mask_newly_built & df['legal_status'].isna(), 'legal_status'] = 'new'
 
-        # Fill based on year_built
         mask_year_new = df['year_built'].isin([2024, 2025, 2026])
         df.loc[mask_year_new & df['legal_status'].isna(), 'legal_status'] = 'new'
         df.loc[mask_year_new & df['condition'].isna(), 'condition'] = 'newly built'
 
-        # Fill legal_status for used properties
         mask_used = df['legal_status'].isna() & ~df['year_built'].isin([2024, 2025, 2026])
         df.loc[mask_used, 'legal_status'] = 'used'
 
@@ -60,13 +54,16 @@ def migrate_and_clean():
             if col == 'bathrooms':
                 df[col] = df[col].fillna(df[col].mode()[0])
             elif col == 'year_built':
-                df[col] = df[col].fillna(int(df[col].mean()))
-            else:
-                df[col] = df[col].fillna(df[col].median())
+                df[col] = df[col].fillna(int(df[col].median()))
 
         for col in categorical_cols:
+            if col == 'facade_condition' or col == 'stairwell_condition':
+                df[col] = df[col].fillna(df['condition'])
+            elif col == 'heating':
+                df[col] = df[col].fillna(df[col].mode()[0])
+            else:
+                df[col] = df[col].fillna('MISSING')
             df[col] = df[col].astype(str)
-            df[col] = df[col].fillna('missing')
 
         return df
     
@@ -95,14 +92,13 @@ def migrate_and_clean():
     apartments_engineered = feature_engineering_apartment(apartments_clean)
     houses_engineered = feature_engineering_house(houses_clean)
 
+    # No longer needed columns (after feature engineering)
     apartments_clean.drop(columns=['size', 'price'], inplace=True)
     houses_clean.drop(columns=['size', 'price', 'property_size'], inplace=True)
 
     new_conn = get_new_connection()
-
     apartments_engineered.to_sql("apartment_listings_processed", new_conn, if_exists='replace', index=False)
     houses_engineered.to_sql("house_listings_processed", new_conn, if_exists='replace', index=False)
-
     new_conn.close()
 
     print("[INFO] Data migration completed.")
@@ -222,13 +218,17 @@ def clear_table(table_name):
     conn.close()
 
 def delete_table(table_name, database):
-    database = int(input("Select database to delete from (1 - raw.db, 2 - processed.db): "))
+    if database not in [1, 2]:
+        database = int(input("Select database to delete from (1 - raw.db, 2 - processed.db): "))
     if database == 1:
         conn = get_connection()
+        database_name = "raw"
     if database == 2:
         conn = get_new_connection()
+        database_name = "processed"
     c = conn.cursor()
     c.execute(f'DROP TABLE IF EXISTS {table_name}')
+    print(f"[INFO] Table '{table_name}' deleted from database {database_name}.")
     conn.commit()
     conn.close()    
 
@@ -240,7 +240,7 @@ def delete_listing(table_name, id):
     conn.close()
 
 def main():
-    migrate_and_clean()
+    process_raw_data()
 
 if __name__ == "__main__":
     main()

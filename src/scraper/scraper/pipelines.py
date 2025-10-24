@@ -137,7 +137,7 @@ class CleanDataPipeline:
                     adapter['facade_condition'] = 'excellent'
                 elif facade_condition == 'átlagos':
                     adapter['facade_condition'] = 'average'
-                elif facade_condition == 'rossz':
+                elif facade_condition == 'rossz' or facade_condition == 'átlagon aluli':
                     adapter['facade_condition'] = 'bad'
 
             if adapter.get('stairwell_condition'):
@@ -151,6 +151,8 @@ class CleanDataPipeline:
                         adapter['stairwell_condition'] = 'excellent'
                     elif stairwell_condition == 'átlagos':
                         adapter['stairwell_condition'] = 'average'
+                    elif stairwell_condition == 'rossz' or stairwell_condition == 'átlagon aluli':
+                        adapter['stairwell_condition'] = 'bad'
 
             if adapter.get('heating'):
                 heating = adapter.get('heating').lower()
