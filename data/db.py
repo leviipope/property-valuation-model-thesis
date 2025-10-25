@@ -148,6 +148,15 @@ def get_all_ids(table_name, site):
     conn.close()
     return ids
 
+def count_listings_per_site(table_name):
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute(f'SELECT site, COUNT(*) as count FROM {table_name} GROUP BY site')
+    counts = c.fetchall()
+    conn.close()
+    for row in counts:
+        print(f"Site: {row['site']}, Listings Count: {row['count']}")
+
 def create_db():
     if not DB_PATH.exists():
         open(DB_PATH, 'w').close()
