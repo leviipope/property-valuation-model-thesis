@@ -15,17 +15,17 @@ def process_raw_data():
     houses = pd.read_sql("SELECT * FROM house_listings", conn)
     conn.close()
 
-    apartments.drop(columns=['site', 'listing_url'], errors='ignore', inplace=True)
-    houses.drop(columns=['site', 'listing_url'], errors='ignore', inplace=True)
+    apartments.drop(columns=['id', 'site', 'listing_url'], errors='ignore', inplace=True)
+    houses.drop(columns=['id', 'site', 'listing_url'], errors='ignore', inplace=True)
 
     # Replace "missing data" with pd.NA
     apartments.replace("missing data", pd.NA, inplace=True)
     houses.replace("missing data", pd.NA, inplace=True)
 
     # Convert columns to numeric where applicable
-    for col in ['rooms', 'size', 'property_size', 'year_built', 'bathrooms']:
+    for col in ['price', 'rooms', 'size', 'property_size', 'year_built', 'bathrooms']:
         houses[col] = pd.to_numeric(houses[col], errors='coerce')
-    for col in ['rooms', 'size', 'year_built', 'bathrooms']:
+    for col in ['price', 'rooms', 'size', 'year_built', 'bathrooms']:
         apartments[col] = pd.to_numeric(apartments[col], errors='coerce')
 
     def clean_table(df):
@@ -55,6 +55,8 @@ def process_raw_data():
                 df[col] = df[col].fillna(df[col].mode()[0])
             elif col == 'year_built':
                 df[col] = df[col].fillna(int(df[col].median()))
+            elif col == 'rooms':
+                df[col] = df[col].fillna(round(df[col].median(), 1))
 
         for col in categorical_cols:
             if col == 'facade_condition' or col == 'stairwell_condition':
@@ -70,22 +72,27 @@ def process_raw_data():
     apartments_clean = clean_table(apartments)
     houses_clean = clean_table(houses)
 
+    apartments_clean = apartments_clean[(apartments_clean['rooms'] > 0) & (apartments_clean['size'] > 0)]
+    houses_clean = houses_clean[(houses_clean['rooms'] > 0) & (houses_clean['size'] > 0) & (houses_clean['property_size'] > 0)]
+
     def feature_engineering_apartment(df):
         df.insert(9, 'age_of_property', 2026 - df['year_built'])
-        df['age_of_property'] = df['age_of_property'].clip(lower=0, upper=100).astype(int)
+        df.loc[:, 'age_of_property'] = df['age_of_property'].clip(lower=0, upper=100).astype(int)
         df.insert(1, 'log_price', (df['price'].apply(lambda x: pd.NA if x <= 0 else x).apply(lambda x: pd.NA if pd.isna(x) else round(np.log(x), 2))))
         df.insert(3, 'log_size', (df['size'].apply(lambda x: pd.NA if x <= 0 else x).apply(lambda x: pd.NA if pd.isna(x) else round(np.log(x), 2))))
-        df.insert(5, 'size_per_room', (df['size'] / df['rooms']).astype(int))
+        df.insert(5, 'size_per_room', (df['size'] / df['rooms']))
+        df.loc[:, 'size_per_room'] = df['size_per_room'].astype(int)
         df.insert(7, 'bathrooms_per_room', (df['bathrooms'] / df['rooms']).round(2))
         return df
     
     def feature_engineering_house(df):
         df.insert(9, 'age_of_property', 2026 - df['year_built'])
-        df['age_of_property'] = df['age_of_property'].clip(lower=0, upper=100).astype(int)
+        df.loc[:, 'age_of_property'] = df['age_of_property'].clip(lower=0, upper=100).astype(int)
         df.insert(1, 'log_price', (df['price'].apply(lambda x: pd.NA if x <= 0 else x).apply(lambda x: pd.NA if pd.isna(x) else round(np.log(x), 2))))
         df.insert(3, 'log_size', (df['size'].apply(lambda x: pd.NA if x <= 0 else x).apply(lambda x: pd.NA if pd.isna(x) else round(np.log(x), 2))))
         df.insert(4, 'log_property_size', (df['property_size'].apply(lambda x: pd.NA if x <= 0 else x).apply(lambda x: pd.NA if pd.isna(x) else round(np.log(x), 2))))
-        df.insert(7, 'size_per_room', (df['size'] / df['rooms']).astype(int))
+        df.insert(7, 'size_per_room', (df['size'] / df['rooms']))
+        df.loc[:, 'size_per_room'] = df['size_per_room'].astype(int)
         df.insert(9, 'bathrooms_per_room', (df['bathrooms'] / df['rooms']).round(2))
         return df
 
@@ -93,8 +100,8 @@ def process_raw_data():
     houses_engineered = feature_engineering_house(houses_clean)
 
     # No longer needed columns (after feature engineering)
-    apartments_clean.drop(columns=['size', 'price'], inplace=True)
-    houses_clean.drop(columns=['size', 'price', 'property_size'], inplace=True)
+    apartments_engineered = apartments_engineered.drop(columns=['size', 'price'])
+    houses_engineered = houses_engineered.drop(columns=['size', 'price', 'property_size'])
 
     new_conn = get_new_connection()
     apartments_engineered.to_sql("apartment_listings_processed", new_conn, if_exists='replace', index=False)
@@ -295,14 +302,7 @@ def replace_values():
     conn.close()
 
 def main():
-    # replace_values()
-    table_name1 = "apartment_listings"
-    table_name2 = "house_listings"
-    column_name = "heating"
-    print(f"\nCounting unique values in column '{column_name}' for table '{table_name1}':")
-    count_unique_values(table_name1, column_name)
-    print(f"\nCounting unique values in column '{column_name}' for table '{table_name2}':")
-    count_unique_values(table_name2, column_name)
+    process_raw_data()
 
 if __name__ == "__main__":
     main()
