@@ -239,8 +239,61 @@ def delete_listing(table_name, id):
     conn.commit()
     conn.close()
 
+def count_unique_values_per_site(table_name, column_name):
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute(f"SELECT site, {column_name}, COUNT(*) as count FROM {table_name} GROUP BY site, {column_name}")
+    values = c.fetchall()
+    conn.close()
+
+    for site, value, count in values:
+        print(f"Site: {site}, {column_name}: {value}, Count: {count}")
+
+def count_unique_values(table_name, column_name):
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute(f"SELECT {column_name}, COUNT(*) as count FROM {table_name} GROUP BY {column_name} ORDER BY count DESC")
+    values = c.fetchall()
+    conn.close()
+
+    for value, count in values:
+        print(f"{column_name}: {value}, Count: {count}")
+
+def replace_values():
+    conn = get_connection()
+    c = conn.cursor()
+    table_name = "apartment_listings"
+    column_name = "heating"
+    try:
+        # ("new value", "old_value"),
+        updates = [
+            #("other", "underfloor heating"),
+            #("other", "individual metered central heating"),
+        ]
+
+        for new_val, old_val in updates:
+            c.execute(
+                f"UPDATE {table_name} SET {column_name} = ? WHERE lower(trim({column_name})) = lower(trim(?))",
+                (new_val, old_val),
+            )
+            conn.commit()
+            print(f"[INFO] Replaced '{old_val}' -> '{new_val}' ({c.rowcount} rows affected)")
+
+    except sqlite3.Error as e:
+        conn.rollback()
+        print(f"[DB ERROR] Failed to update heating values: {e}")
+
+    conn.close()
+
 def main():
-    process_raw_data()
+    # replace_values()
+    table_name1 = "apartment_listings"
+    table_name2 = "house_listings"
+    column_name = "heating"
+    print(f"\nCounting unique values in column '{column_name}' for table '{table_name1}':")
+    count_unique_values(table_name1, column_name)
+    print(f"\nCounting unique values in column '{column_name}' for table '{table_name2}':")
+    count_unique_values(table_name2, column_name)
 
 if __name__ == "__main__":
     main()
