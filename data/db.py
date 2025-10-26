@@ -59,7 +59,10 @@ def process_raw_data():
                 df[col] = df[col].fillna(round(df[col].median(), 1))
 
         for col in categorical_cols:
-            if col == 'facade_condition' or col == 'stairwell_condition':
+            if col == 'condition':
+                # if condition is missing, drop the row
+                df = df.dropna(subset=['condition'])
+            elif col in ['facade_condition', 'stairwell_condition']:
                 df[col] = df[col].fillna(df['condition'])
             elif col == 'heating':
                 df[col] = df[col].fillna(df[col].mode()[0])
