@@ -1,0 +1,23 @@
+Random Forest
+Apartment R^2 (log price):  0.30615503963266844
+Apartment MAE (HUF): 10,657,411.48
+Apartment RMSE (HUF): 19,476,940.24
+House R^2 (log price):  0.8860042305055132
+House MAE (HUF): 19,505,650.99
+House RMSE (HUF): 33,476,799.31
+
+Linear
+Apartment R^2 (log price):  0.14401419599388254
+Apartment MAE (HUF): 14,953,306.04
+Apartment RMSE (HUF): 25,934,173.52
+House R^2 (log price):  0.8302012970878162
+House MAE (HUF): 28,497,392.38
+House RMSE (HUF): 47,332,018.62
+
+XGBoost
+Apartment R^2 (log price):  0.2867122064323896
+Apartment MAE (HUF): 10,459,254.21
+Apartment RMSE (HUF): 19,263,153.50
+House R^2 (log price):  0.9002645182727096
+House MAE (HUF): 17,535,172.32
+House RMSE (HUF): 31,844,902.41
