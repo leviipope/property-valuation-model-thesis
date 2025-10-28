@@ -8,7 +8,7 @@ from data.db import get_all_ids
 
 class JofogasHazSpider(scrapy.Spider):
     name = "jofogas_haz"
-    start_urls = ["https://ingatlan.jofogas.hu/hajdu-bihar/debrecen/haz?st=s"]
+    start_urls = ["https://ingatlan.jofogas.hu/magyarorszag/haz"]
 
     def parse(self, response):
         listings = response.css("div.list-items > div")
@@ -56,6 +56,11 @@ class JofogasHazSpider(scrapy.Spider):
         heating = response.xpath(
                 '//div[span[text()="Fűtés típusa:"]]//h6/span/text()'
             ).get(default="Hiányzó adat")
+        location = response.css(
+            "div[class='MuiGrid-root MuiGrid-container MuiGrid-direction-xs-column css-10kx4en'] > div:nth-child(2) ::text"
+            ).getall()
+        if not location:
+            location = "Hiányzó adat"
         year_built = response.xpath(
                 '//div[span[text()="Építés éve:"]]//h6/span/text()'
             ).get(default="Hiányzó adat")
@@ -73,6 +78,7 @@ class JofogasHazSpider(scrapy.Spider):
         scraper_item['condition'] = condition
         scraper_item['rooms'] = rooms
         scraper_item['heating'] = heating
+        scraper_item['location'] = location
         scraper_item['year_built'] = year_built
         scraper_item['property_size'] = property_size
         scraper_item['bathrooms'] = "missing data"

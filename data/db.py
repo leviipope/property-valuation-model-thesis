@@ -60,8 +60,9 @@ def process_raw_data():
 
         for col in categorical_cols:
             if col == 'condition':
-                # if condition is missing, drop the row
                 df = df.dropna(subset=['condition'])
+            elif col == 'location':
+                df = df.dropna(subset=['location'])
             elif col in ['facade_condition', 'stairwell_condition']:
                 df[col] = df[col].fillna(df['condition'])
             elif col == 'heating':
@@ -78,18 +79,35 @@ def process_raw_data():
     apartments_clean = apartments_clean[(apartments_clean['rooms'] > 0) & (apartments_clean['size'] > 0)]
     houses_clean = houses_clean[(houses_clean['rooms'] > 0) & (houses_clean['size'] > 0) & (houses_clean['property_size'] > 0)]
 
+    capital_city = 'budapest'
+    large_cities = ['debrecen', 'szeged', 'miskolc', 'győr', 'pécs']
+    big_cities = ['nyíregyháza', 'kecskemét', 'székesfehérvár', 'szombathely', 'érd', 'szolnok', 'tatabánya', 'kaposvár', 'békéscsaba', 'veszprém', 'zalaegerszeg', 'eger', 'nagykanizsa']
+
+    def categorize_city(city):
+        city_lower = city.strip().lower()
+        if city_lower == capital_city:
+            return 1
+        elif city_lower in large_cities:
+            return 2
+        elif city_lower in big_cities:
+            return 3
+        else:
+            return 4
+
     def feature_engineering_apartment(df):
-        df.insert(9, 'age_of_property', 2026 - df['year_built'])
+        df.insert(11, 'age_of_property', 2026 - df['year_built'])
         df.loc[:, 'age_of_property'] = df['age_of_property'].clip(lower=0, upper=100).astype(int)
         df.insert(1, 'log_price', (df['price'].apply(lambda x: pd.NA if x <= 0 else x).apply(lambda x: pd.NA if pd.isna(x) else round(np.log(x), 2))))
         df.insert(3, 'log_size', (df['size'].apply(lambda x: pd.NA if x <= 0 else x).apply(lambda x: pd.NA if pd.isna(x) else round(np.log(x), 2))))
         df.insert(5, 'size_per_room', (df['size'] / df['rooms']))
         df.loc[:, 'size_per_room'] = df['size_per_room'].astype(int)
         df.insert(7, 'bathrooms_per_room', (df['bathrooms'] / df['rooms']).round(2))
+        df.insert(15, 'city_district', df.apply(lambda x: x['city'] if x['district'] == 'MISSING' else x['city'] + ' ' + x['district'], axis=1))
+        df.insert(16, 'city_type', df['city'].apply(categorize_city))
         return df
     
     def feature_engineering_house(df):
-        df.insert(9, 'age_of_property', 2026 - df['year_built'])
+        df.insert(11, 'age_of_property', 2026 - df['year_built'])
         df.loc[:, 'age_of_property'] = df['age_of_property'].clip(lower=0, upper=100).astype(int)
         df.insert(1, 'log_price', (df['price'].apply(lambda x: pd.NA if x <= 0 else x).apply(lambda x: pd.NA if pd.isna(x) else round(np.log(x), 2))))
         df.insert(3, 'log_size', (df['size'].apply(lambda x: pd.NA if x <= 0 else x).apply(lambda x: pd.NA if pd.isna(x) else round(np.log(x), 2))))
@@ -97,14 +115,16 @@ def process_raw_data():
         df.insert(7, 'size_per_room', (df['size'] / df['rooms']))
         df.loc[:, 'size_per_room'] = df['size_per_room'].astype(int)
         df.insert(9, 'bathrooms_per_room', (df['bathrooms'] / df['rooms']).round(2))
+        df.insert(17, 'city_district', df.apply(lambda x: x['city'] if x['district'] == 'MISSING' else x['city'] + ' ' + x['district'], axis=1))
+        df.insert(18, 'city_type', df['city'].apply(categorize_city))
         return df
 
     apartments_engineered = feature_engineering_apartment(apartments_clean)
     houses_engineered = feature_engineering_house(houses_clean)
 
     # No longer needed columns (after feature engineering)
-    apartments_engineered = apartments_engineered.drop(columns=['size', 'price'])
-    houses_engineered = houses_engineered.drop(columns=['size', 'price', 'property_size'])
+    apartments_engineered = apartments_engineered.drop(columns=['size', 'price', 'location', 'district'])
+    houses_engineered = houses_engineered.drop(columns=['size', 'price', 'property_size', 'location', 'district'])
 
     new_conn = get_new_connection()
     apartments_engineered.to_sql("apartment_listings_processed", new_conn, if_exists='replace', index=False)
@@ -198,6 +218,9 @@ def create_apartment_table():
             facade_condition TEXT,
             stairwell_condition TEXT,
             heating TEXT,
+            location TEXT,
+            city TEXT,
+            district TEXT,
             year_built INT,
             legal_status TEXT,
             PRIMARY KEY (site, id)
@@ -220,6 +243,9 @@ def create_house_table():
             condition TEXT,
             facade_condition TEXT,
             heating TEXT,
+            location TEXT,
+            city TEXT,
+            district TEXT,
             year_built INT,
             legal_status TEXT,
             PRIMARY KEY (site, id)

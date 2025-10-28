@@ -82,6 +82,25 @@ class CleanDataPipeline:
                 elif heating == 'napelemes fűtés':
                     adapter['heating'] = 'renewable'
 
+            if adapter.get('location'):
+                location = adapter.get('location')
+                if location != 'missing data':
+                    remove_count = location.count(';')
+                    for i in range(remove_count):
+                        location.remove(';')
+                        location.remove('\xa0')
+                    if 'Cím:' in location:
+                        location.remove('Cím:')
+                    for i in range(len(location)):
+                        location[i] = location[i].strip()
+                    adapter['location'] = ', '.join(location)
+                    if 'budapest' in location[0].lower():
+                        adapter['city'] = 'Budapest'
+                        adapter['district'] = location[1] if len(location) > 1 else 'missing data'
+                    else:
+                        adapter['city'] = location[1] if len(location) > 1 else 'missing data'
+                        adapter['district'] = location[2] if len(location) > 2 else 'missing data'
+
             if adapter.get('price'):
                 price_str = adapter.get('price').replace('Ft', '').replace(' ', '').replace('\n', '')
                 adapter['price'] = self.try_convert_to_int(price_str, item_id=adapter.get('id'), field_name='price')
@@ -181,6 +200,19 @@ class CleanDataPipeline:
                         adapter['heating'] = 'renewable'
                     else:
                         adapter['heating'] = 'other'
+
+            if adapter.get('location'):
+                location = adapter.get('location')
+                list = location.split(',')
+                for i in range(len(list)):
+                    list[i] = list[i].strip()
+                if 'budapest' in list[0].lower():
+                    adapter['city'] = 'Budapest'
+                    adapter['district'] = list[0].split(' ')[1] + ' ' + list[0].split(' ')[2] 
+                else:
+                    adapter['city'] = list[0] if len(list) > 0 else 'missing data'
+                    adapter['district'] = list[1] if len(list) > 1 else 'missing data'
+                adapter['location'] = ', '.join(list)
 
             if adapter.get('legal_status'):
                 legal_status = adapter.get('legal_status').lower().strip()
