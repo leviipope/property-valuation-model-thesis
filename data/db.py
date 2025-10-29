@@ -29,6 +29,9 @@ def process_raw_data():
         apartments[col] = pd.to_numeric(apartments[col], errors='coerce')
 
     def clean_table(df):
+        # Data validation
+        df = df[(df['price'] >= 4e6) & (df['price'] <= 1e9)]
+
         # Legal status cross validation
         mask_new = df['legal_status'].eq('new')
         df.loc[mask_new & df['year_built'].isna(), 'year_built'] = 2024
@@ -123,8 +126,8 @@ def process_raw_data():
     houses_engineered = feature_engineering_house(houses_clean)
 
     # No longer needed columns (after feature engineering)
-    apartments_engineered = apartments_engineered.drop(columns=['size', 'price', 'location', 'district'])
-    houses_engineered = houses_engineered.drop(columns=['size', 'price', 'property_size', 'location', 'district'])
+    apartments_engineered = apartments_engineered.drop(columns=['size', 'price', 'location', 'district', 'year_built'])
+    houses_engineered = houses_engineered.drop(columns=['size', 'price', 'property_size', 'location', 'district', 'year_built'])
 
     new_conn = get_new_connection()
     apartments_engineered.to_sql("apartment_listings_processed", new_conn, if_exists='replace', index=False)
@@ -132,6 +135,19 @@ def process_raw_data():
     new_conn.close()
 
     print("[INFO] Data migration completed.")
+
+def visualize_data():
+    conn = get_new_connection()
+    apartments = pd.read_sql("SELECT * FROM apartment_listings_processed", conn)
+    houses = pd.read_sql("SELECT * FROM house_listings_processed", conn)
+    conn.close()
+
+    import plotly.express as px
+    fig = px.histogram(apartments, x='city_district', title='Apartment Price Distribution')
+    fig.show()
+
+    fig = px.histogram(houses, x='city_district', title='House Price Distribution')
+    fig.show()
 
 def get_new_connection():
     DB_PATH = PROJECT_ROOT / "data/processed/processed.db"
@@ -332,6 +348,21 @@ def replace_values():
 
 def main():
     process_raw_data()
+    conn = get_new_connection()
+    apartments = pd.read_sql("SELECT * FROM apartment_listings_processed", conn)
+    houses = pd.read_sql("SELECT * FROM house_listings_processed", conn)
+    conn.close()
+
+    # print all unique locations sorted
+    unique_apartment_locations = apartments['city_district'].unique()
+    unique_house_locations = houses['city_district'].unique()
+    print("Unique Apartment Locations:")
+    for loc in sorted(unique_apartment_locations):
+        #print(loc)
+        pass
+    print("\nUnique House Locations:")
+    for loc in sorted(unique_house_locations):
+        print(loc)
 
 if __name__ == "__main__":
     main()

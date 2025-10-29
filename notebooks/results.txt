@@ -21,3 +21,30 @@ Apartment RMSE (HUF): 19,263,153.50
 House R^2 (log price):  0.9002645182727096
 House MAE (HUF): 17,535,172.32
 House RMSE (HUF): 31,844,902.41
+
+---
+After scraping the whole coutry and removing properties over 1B HUF
+
+Random Forest
+Apartment R^2 (log price):  0.8224684719666885
+Apartment MAE (price units): 24,372,217.39
+Apartment RMSE (price units): 47,496,161.68
+House R^2 (log price):  0.7570151048365477
+House MAE (price units): 33,044,505.57
+House RMSE (price units): 62,057,464.29
+
+LR
+Apartment R^2 (log price):  0.8581651540079145
+Apartment MAE (price units): 22,253,830.70
+Apartment RMSE (price units): 44,057,679.67
+House R^2 (log price):  0.8208487712547561
+House MAE (price units): 28,915,893.42
+House RMSE (price units): 54,616,280.51
+
+XGBoost
+Apartment R^2 (log price):  0.8574797658777873
+Apartment MAE (price units): 22,005,182.59
+Apartment RMSE (price units): 43,877,712.87
+House R^2 (log price):  0.8168492133077786
+House MAE (price units): 29,595,315.70
+House RMSE (price units): 57,181,837.91
