@@ -232,11 +232,69 @@ def data_visualization_page():
             with col2:
                 fig = px.histogram(filtered_df, x='size', color='property_type', barmode='overlay', title='Size Distribution', range_x=[0, 2000], labels={'size':'Size (sqm)', 'property_type':'Property Type'})
                 st.plotly_chart(fig, use_container_width=True)
-            
+
 
 def model_performance_page():
-    st.title("Model Performance")
-    st.header("Evaluate the Model")
+    st.title("XGBoost Model Performance")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.subheader("Apartment Model Performance")
+
+        st.metric(label="R² (log price)", value="0.8575")
+        st.metric(label="MAE (HUF)", value="22,005,182.59")
+        st.metric(label="RMSE (HUF)", value="43,877,712.87")
+
+    with col2:
+        st.subheader("House Model Performance")
+
+        st.metric(label="R² (log price)", value="0.8169")
+        st.metric(label="MAE (HUF)", value="29,595,315.70")
+        st.metric(label="RMSE (HUF)", value="57,181,837.91")
+
+    apts_data = pd.read_csv(project_root / 'notebooks' / 'testdata' / 'testdata_apartments.csv')
+    houses_data = pd.read_csv(project_root / 'notebooks' / 'testdata' / 'testdata_houses.csv')
+  
+    y_true_apts = apts_data[['y_true']]
+    y_pred_apts = apts_data[['y_pred']]
+
+    df_perf_apts = pd.DataFrame({'y_true': y_true_apts['y_true'], 'y_pred': y_pred_apts['y_pred']})
+    df_perf_apts['Residuals'] = df_perf_apts['y_true'] - df_perf_apts['y_pred']
+
+    y_true_houses = houses_data[['y_true']]
+    y_pred_houses = houses_data[['y_pred']]
+
+    df_perf_houses = pd.DataFrame({'y_true': y_true_houses['y_true'], 'y_pred': y_pred_houses['y_pred']})
+    df_perf_houses['Residuals'] = df_perf_houses['y_true'] - df_perf_houses['y_pred']
+
+    col1, col2 = st.columns(2)
+    with col1:
+        fig = px.scatter(df_perf_apts, x='y_true', y='y_pred', trendline="ols", title='Apartment Model: True vs Predicted Prices', labels={'y_true':'True Price', 'y_pred':'Predicted Price'}, range_x=[0, 4e8], range_y=[0, 4e8])
+        fig.update_traces(marker=dict(size=6, opacity=0.6), selector=dict(mode='markers'))
+        fig.update_traces(line=dict(color='red', width=4), selector=dict(mode='lines'))
+        min_val = min(df_perf_apts['y_true'].min(), df_perf_apts['y_pred'].min())
+        max_val = max(df_perf_apts['y_true'].max(), df_perf_apts['y_pred'].max())
+        fig.add_shape(type="line", x0=min_val, y0=min_val, x1=max_val, y1=max_val, line=dict(color="green", dash="dash", width=3), name="Perfect Prediction")
+        st.plotly_chart(fig, use_container_width=True)
+
+        fig = px.scatter(df_perf_apts, x='y_true', y='Residuals', title='Apartment Model: Residuals vs True Prices', labels={'y_true':'True Price', 'Residuals':'Residuals'}, range_x=[0, 4e8], range_y=[-1e8, 1e8])
+        fig.add_hline(y=0, line_dash="dash", line_color="gray")
+        fig.update_traces(marker=dict(size=6, opacity=0.6), selector=dict(mode='markers'))
+        st.plotly_chart(fig, use_container_width=True)
+
+    with col2:
+        fig = px.scatter(df_perf_houses, x='y_true', y='y_pred', trendline="ols", title='House Model: True vs Predicted Prices', labels={'y_true':'True Price', 'y_pred':'Predicted Price'}, range_x=[0, 4e8], range_y=[0, 4e8])
+        fig.update_traces(marker=dict(size=6, opacity=0.6), selector=dict(mode='markers'))
+        fig.update_traces(line=dict(color='red', width=4), selector=dict(mode='lines'))
+        min_val = min(df_perf_houses['y_true'].min(), df_perf_houses['y_pred'].min())
+        max_val = max(df_perf_houses['y_true'].max(), df_perf_houses['y_pred'].max())
+        fig.add_shape(type="line", x0=min_val, y0=min_val, x1=max_val, y1=max_val, line=dict(color="green", dash="dash", width=3), name="Perfect Prediction")
+        st.plotly_chart(fig, use_container_width=True)
+
+        fig = px.scatter(df_perf_houses, x='y_true', y='Residuals', title='House Model: Residuals vs True Prices', labels={'y_true':'True Price', 'Residuals':'Residuals'}, range_x=[0, 4e8], range_y=[-1e8, 1e8])
+        fig.add_hline(y=0, line_dash="dash", line_color="gray")
+        fig.update_traces(marker=dict(size=6, opacity=0.6), selector=dict(mode='markers'))
+        st.plotly_chart(fig, use_container_width=True)
 
 def sidebar_navigation():
     page = st.sidebar.radio(
@@ -246,7 +304,6 @@ def sidebar_navigation():
     return page
 
 def main():
-    model_apts, model_houses = load_models()
     page = sidebar_navigation()
     if page == "Estimate Property Value":
         estimation_page()
