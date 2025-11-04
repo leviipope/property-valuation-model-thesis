@@ -36,3 +36,10 @@ def heating_types(table):
         query = "SELECT DISTINCT heating FROM house_listings_processed"
         df = pd.read_sql(query, conn)
         return df['heating'].tolist()
+    
+def load_data():
+    conn = get_new_connection()
+    houses = pd.read_sql("SELECT * FROM house_listings_cleaned", conn)
+    apartments = pd.read_sql("SELECT * FROM apartment_listings_cleaned", conn)
+    conn.close()
+    return houses, apartments

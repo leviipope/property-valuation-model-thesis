@@ -125,11 +125,14 @@ def process_raw_data():
     apartments_engineered = feature_engineering_apartment(apartments_clean)
     houses_engineered = feature_engineering_house(houses_clean)
 
+    new_conn = get_new_connection()
+    apartments_engineered.to_sql("apartment_listings_cleaned", new_conn, if_exists='replace', index=False)
+    houses_engineered.to_sql("house_listings_cleaned", new_conn, if_exists='replace', index=False)
+
     # No longer needed columns (after feature engineering)
     apartments_engineered = apartments_engineered.drop(columns=['size', 'price', 'location', 'district', 'year_built'])
     houses_engineered = houses_engineered.drop(columns=['size', 'price', 'property_size', 'location', 'district', 'year_built'])
 
-    new_conn = get_new_connection()
     apartments_engineered.to_sql("apartment_listings_processed", new_conn, if_exists='replace', index=False)
     houses_engineered.to_sql("house_listings_processed", new_conn, if_exists='replace', index=False)
     new_conn.close()
@@ -348,21 +351,6 @@ def replace_values():
 
 def main():
     process_raw_data()
-    conn = get_new_connection()
-    apartments = pd.read_sql("SELECT * FROM apartment_listings_processed", conn)
-    houses = pd.read_sql("SELECT * FROM house_listings_processed", conn)
-    conn.close()
-
-    # print all unique locations sorted
-    unique_apartment_locations = apartments['city_district'].unique()
-    unique_house_locations = houses['city_district'].unique()
-    print("Unique Apartment Locations:")
-    for loc in sorted(unique_apartment_locations):
-        #print(loc)
-        pass
-    print("\nUnique House Locations:")
-    for loc in sorted(unique_house_locations):
-        print(loc)
 
 if __name__ == "__main__":
     main()

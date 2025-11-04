@@ -2,8 +2,10 @@ import streamlit as st
 import joblib
 import pandas as pd
 import numpy as np
+import plotly.express as px
+import plotly.graph_objects as go
 from pathlib import Path
-from utils.frontend_utils import get_cities, heating_types, categorize_city
+from utils.frontend_utils import get_cities, heating_types, categorize_city, load_data
 
 project_root = Path(__file__).resolve().parent.parent
 
@@ -20,6 +22,7 @@ def load_models():
         return None, None
 
 def estimation_page():
+    st.set_page_config(layout="centered")
     st.title("Real Estate Valuation")
     st.header("Enter Property Details")
 
@@ -145,8 +148,91 @@ def predict_value(model, input_data):
         print(f"Error during prediction: {e}")
 
 def data_visualization_page():
+    st.set_page_config(layout="wide")
     st.title("Data Visualization")
-    st.header("Explore the Data")
+
+    houses, apartments = load_data()
+
+    sample_size = min(len(houses), len(apartments), 3000)
+    houses = houses.sample(n=sample_size, random_state=42)
+    apartments = apartments.sample(n=sample_size, random_state=42)
+
+    tab1, tab2 = st.tabs(["Apartments vs. Houses", "Data Exploreer"])
+    with tab1:
+        st.header("Apartments vs. Houses")
+
+        col1, col2 = st.columns(2)
+        with col1:
+                st.subheader("Apartments")
+
+                fig = px.histogram(apartments, x='price', title='Apartment Price Distribution', range_x=[0, 3e8], labels={'price':'Price (HUF)'})
+                st.plotly_chart(fig, use_container_width=True)
+
+                fig = go.Figure(go.Histogram(x=apartments["size"], xbins=dict(start=0, end=500, size=10), hovertemplate='Count: %{y}<br>Size: %{x} sqm<extra></extra>'))
+                fig.update_layout(title="Property Size Distribution", xaxis_title="Size (sqm)", yaxis_title="Count", xaxis=dict(range=[0, 500]), yaxis=dict(range=[0, 400]))
+                st.plotly_chart(fig, use_container_width=True)
+
+                fig = px.box(apartments, x='city_type', y='price', title='Apartment Price by City Type', range_y=[0, 4e8], labels={'price':'Price (HUF)', 'city_type':'City Type'})
+                st.plotly_chart(fig, use_container_width=True)
+
+                fig = px.scatter(apartments, x='price', y='size', trendline="ols", title='Apartment Price vs Size', labels={'price':'Price (HUF)', 'size':'Size (sqm)'}, range_x=[0, 5e8], range_y=[0, 500])
+                fig.update_traces(marker=dict(size=8, opacity=0.6), selector=dict(mode='markers'))
+                fig.update_traces(line=dict(color='red', width=4), selector=dict(mode='lines'))
+                st.plotly_chart(fig, use_container_width=True)
+
+                # 
+
+        with col2:
+                st.subheader("Houses")
+
+                fig = px.histogram(houses, x='price', title='House Price Distribution', range_x=[0, 3e8], labels={'price':'Price (HUF)'})
+                st.plotly_chart(fig, use_container_width=True)
+
+                fig = go.Figure(go.Histogram(x=houses["size"], xbins=dict(start=0, end=500, size=10), hovertemplate='Count: %{y}<br>Size: %{x} sqm<extra></extra>'))
+                fig.update_layout(title="Property Size Distribution", xaxis_title="Size (sqm)", yaxis_title="Count", xaxis=dict(range=[0, 500]), yaxis=dict(range=[0, 400]))
+                st.plotly_chart(fig, use_container_width=True)
+
+                fig = px.box(houses, x='city_type', y='price', title='House Price by City Type', range_y=[0, 4e8], labels={'price':'Price (HUF)', 'city_type':'City Type'})
+                st.plotly_chart(fig, use_container_width=True)
+
+                fig = px.scatter(houses, x='price', y='size', trendline="ols", title='House Price vs Size', labels={'price':'Price (HUF)', 'size':'Size (sqm)'}, range_x=[0, 5e8], range_y=[0, 500])
+                fig.update_traces(marker=dict(size=8, opacity=0.6), selector=dict(mode='markers'))
+                fig.update_traces(line=dict(color='red', width=4), selector=dict(mode='lines'))
+                st.plotly_chart(fig, use_container_width=True)
+
+    with tab2:
+        st.header("Data Explorer")
+        st.subheader("Filters")
+        apartments['property_type'] = 'Apartment'
+        houses['property_type'] = 'House'
+        df = pd.concat([apartments, houses])
+        selected_property_type = st.multiselect("Select Property Type", options=['Apartment', 'House'], default=['Apartment', 'House'])
+        selected_city = st.multiselect("Select City", options=houses['city'].unique().tolist() + apartments['city'].unique().tolist(), default=houses['city'].unique().tolist()[:5])
+        selected_price_range = st.slider("Select Price Range (HUF)", min_value=0, max_value=1_000_000_000, value=(0, 500_000_000), step=1_000_000)
+        selected_size_range = st.slider("Select Size Range (sqm)", min_value=0, max_value=2000, value=(0, 500), step=10)
+
+        filtered_df = df[
+            (df['property_type'].isin(selected_property_type)) &
+            (df['city'].isin(selected_city)) &
+            (df['price'].between(*selected_price_range)) &
+            (df['size'].between(*selected_size_range))
+        ]
+
+        st.write("Total Properties:", filtered_df.shape[0])
+
+        if st.checkbox("Show Filtered Data"):
+            st.dataframe(filtered_df)
+
+        if not filtered_df.empty:
+            col1, col2 = st.columns(2)
+            with col1:
+                fig = px.histogram(filtered_df, x='price', color='property_type', barmode='overlay', title='Price Distribution', range_x=[0, 1e9], labels={'price':'Price (HUF)', 'property_type':'Property Type'})
+                st.plotly_chart(fig, use_container_width=True)
+
+            with col2:
+                fig = px.histogram(filtered_df, x='size', color='property_type', barmode='overlay', title='Size Distribution', range_x=[0, 2000], labels={'size':'Size (sqm)', 'property_type':'Property Type'})
+                st.plotly_chart(fig, use_container_width=True)
+            
 
 def model_performance_page():
     st.title("Model Performance")
