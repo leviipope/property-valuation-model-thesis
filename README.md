@@ -2,6 +2,10 @@
 
 A machine learning project designed to estimate the value of residential properties (apartments and houses) in Hungary. This project integrates web scraping, data preprocessing, and machine learning models to provide accurate price predictions.
 
+## Overview
+![Main Page](img/estimate_property_value.jpeg)
+[More photos](img/IMAGES.md)
+
 ## Features
 
 -   **Web Scraping**: Automated collection of real estate data from major Hungarian property sites (Jofogas, Otthon Centrum) using Scrapy.
