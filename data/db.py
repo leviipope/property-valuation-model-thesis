@@ -153,12 +153,12 @@ def visualize_data():
     fig.show()
 
 def get_new_connection():
-    DB_PATH = PROJECT_ROOT / "data/processed/processed.db"
+    PDB_PATH = PROJECT_ROOT / "data/processed/processed.db"
     try:
-        if not os.path.exists(DB_PATH):
-            raise FileNotFoundError(f"Database file not found at {DB_PATH}")
+        if not os.path.exists(PDB_PATH):
+            raise FileNotFoundError(f"Database file not found at {PDB_PATH}")
         
-        conn = sqlite3.connect(DB_PATH)
+        conn = sqlite3.connect(PDB_PATH)
         conn.row_factory = sqlite3.Row
         return conn
     except sqlite3.Error as e:
