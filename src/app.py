@@ -18,7 +18,7 @@ def load_models():
         model_houses = joblib.load(model2_path)
         return model_apts, model_houses
     except Exception as e:
-        st.error(f"Error loading models: {e}")
+        st.error(f"Error loading models.")
         return None, None
 
 def estimation_page():
@@ -144,8 +144,7 @@ def predict_value(model, input_data):
         price = np.exp(prediction)
         st.success(f"Estimated Property Value: {price:,.0f} HUF")
     except Exception as e:
-        st.error(f"Error during prediction: {e}")
-        print(f"Error during prediction: {e}")
+        st.error(f"Error during prediction.")
 
 def data_visualization_page():
     st.set_page_config(layout="wide")
